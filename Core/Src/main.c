@@ -24,7 +24,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "command_line_task.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -58,6 +58,13 @@ const osThreadAttr_t blink02_attributes = {
   .priority = (osPriority_t) osPriorityBelowNormal,
   .stack_size = 128
 };
+/* Definitions for ConsoleTask */
+osThreadId_t ConsoleTaskHandle;
+const osThreadAttr_t ConsoleTask_attributes = {
+  .name = "ConsoleTask",
+  .priority = (osPriority_t) osPriorityLow,
+  .stack_size = 128
+};
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -68,6 +75,7 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 void StartBlink01(void *argument);
 void StartBlink02(void *argument);
+void StartConsoleTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -136,6 +144,9 @@ int main(void)
 
   /* creation of blink02 */
   blink02Handle = osThreadNew(StartBlink02, NULL, &blink02_attributes);
+
+  /* creation of ConsoleTask */
+  ConsoleTaskHandle = osThreadNew(StartConsoleTask, NULL, &ConsoleTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -212,7 +223,20 @@ static void MX_USART2_UART_Init(void)
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
   huart2.Init.BaudRate = 115200;
-  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;/*
+   * command_line_task.h
+   *
+   *  Created on: Feb 10, 2020
+   *      Author: s3rf
+   */
+
+  #ifndef INC_COMMAND_LINE_TASK_H_
+  #define INC_COMMAND_LINE_TASK_H_
+
+
+
+  #endif /* INC_COMMAND_LINE_TASK_H_ */
+
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
   huart2.Init.Mode = UART_MODE_TX_RX;
@@ -303,6 +327,25 @@ void StartBlink02(void *argument)
   //We should never be here unless there is cause to terminate
   osThreadTerminate(NULL);
   /* USER CODE END StartBlink02 */
+}
+
+/* USER CODE BEGIN Header_StartConsoleTask */
+/**
+* @brief Function implementing the ConsoleTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartConsoleTask */
+void StartConsoleTask(void *argument)
+{
+  /* USER CODE BEGIN StartConsoleTask */
+  /* Infinite loop */
+  cliTask();
+
+  /*Code should Never Reach THis point*/
+  osThreadTerminate(NULL);
+
+  /* USER CODE END StartConsoleTask */
 }
 
 /**
