@@ -24,16 +24,26 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "ntshell.h"
+#include "ntShellThread.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
+typedef StaticTask_t osStaticThreadDef_t;
 /* USER CODE BEGIN PTD */
 
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+UART_HandleTypeDef huart2;
+#ifdef __GNUC__
+   /* With GCC, small printf (option LD Linker->Libraries->Small printf
+      set to 'Yes') calls __io_putchar() */
+   #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+ #else
+   #define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
+ #endif /* __GNUC__ */
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -42,7 +52,7 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-UART_HandleTypeDef huart2;
+
 
 /* Definitions for blink01 */
 osThreadId_t blink01Handle;
@@ -58,6 +68,18 @@ const osThreadAttr_t blink02_attributes = {
   .priority = (osPriority_t) osPriorityBelowNormal,
   .stack_size = 128
 };
+/* Definitions for NTShellTask */
+osThreadId_t NTShellTaskHandle;
+uint32_t NTShellTaskBuffer[ 128 ];
+osStaticThreadDef_t NTShellTaskControlBlock;
+const osThreadAttr_t NTShellTask_attributes = {
+  .name = "NTShellTask",
+  .stack_mem = &NTShellTaskBuffer[0],
+  .stack_size = sizeof(NTShellTaskBuffer),
+  .cb_mem = &NTShellTaskControlBlock,
+  .cb_size = sizeof(NTShellTaskControlBlock),
+  .priority = (osPriority_t) osPriorityNormal,
+};
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -68,6 +90,7 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 void StartBlink01(void *argument);
 void StartBlink02(void *argument);
+void StartNTShellTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -95,7 +118,10 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
+  /* Private function prototypes -----------------------------------------------*/
 
+   HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);
+   HAL_NVIC_EnableIRQ(USART2_IRQn);
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -136,6 +162,9 @@ int main(void)
 
   /* creation of blink02 */
   blink02Handle = osThreadNew(StartBlink02, NULL, &blink02_attributes);
+
+  /* creation of NTShellTask */
+  NTShellTaskHandle = osThreadNew(StartNTShellTask, NULL, &NTShellTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -260,6 +289,20 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+/**
+  * @brief  Retargets the C library printf function to the USART.
+  * @param  None
+  * @retval None
+  */
+PUTCHAR_PROTOTYPE
+{
+  /* Place your implementation of fputc here */
+  /* e.g. write a character to the EVAL_COM1 and Loop until the end of transmission */
+  HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, 0xFFFF);
+
+  return ch;
+}
+
 
 /* USER CODE END 4 */
 
@@ -303,6 +346,29 @@ void StartBlink02(void *argument)
   //We should never be here unless there is cause to terminate
   osThreadTerminate(NULL);
   /* USER CODE END StartBlink02 */
+}
+
+/* USER CODE BEGIN Header_StartNTShellTask */
+/**
+* @brief Function implementing the NTShellTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartNTShellTask */
+void StartNTShellTask(void *argument)
+{
+  /* USER CODE BEGIN StartNTShellTask */
+  /* Infinite loop */
+  /* Start the nt-shell VT-100 Console application port in a thread */
+  ntShellTask();
+
+  for(;;)
+  {
+
+  }
+  osThreadTerminate(NULL);
+
+  /* USER CODE END StartNTShellTask */
 }
 
 /**
